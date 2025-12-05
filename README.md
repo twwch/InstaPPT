@@ -8,9 +8,9 @@
 
 Here is a visual comparison of the original and translated slides:
 
-![Visual Comparison](images/demo_comparison.png)
+![Visual Comparison](images/demo_comparison.jpeg)
 
-[View full comparison PDF](examples/AI发展趋势2025_comparison.pdf)
+[View full comparison PDF](examples/守护地球之肺：森林保护行动_comparison.pdf)
 
 ## Features
 
@@ -19,6 +19,45 @@ Here is a visual comparison of the original and translated slides:
 - **Visual Comparison Report:** Generates a side-by-side PDF report showing the original and translated slides as images, ensuring "what you see is what you get".
 - **Smart Caching:** Caches translation results to save costs and time on repeated runs.
 - **Cross-Platform:** Works on macOS (optimized) and Windows.
+
+## Architecture
+
+```mermaid
+graph TD
+    User([User]) -->|Input| Interface
+    
+    subgraph Interface ["User Interface"]
+        CLI[Command Line]
+        UI[Web UI (Gradio)]
+    end
+    
+    Interface --> Controller[Core Controller]
+    
+    subgraph Pipeline ["Processing Pipeline"]
+        Parser[PPTX Parser] -->|Extract Text| Segments[Text Segments]
+        
+        subgraph Translation ["LLM Translation Loop"]
+            Step1[Translation] --> Step2[Evaluation]
+            Step2 -- "Low Score" --> Step3[Optimization]
+            Step2 -- "High Score" --> Ready[Ready]
+            Step3 --> Ready
+        end
+        
+        Segments -->|Parallel Processing| Translation
+        Translation <-->|API Calls| LLM[(LLM Provider)]
+        
+        Ready --> Assembler[PPTX Assembler]
+        Assembler -->|Generate| Artifacts
+    end
+    
+    Controller --> Pipeline
+    
+    subgraph Artifacts ["Output Files"]
+        File1[Translated PPTX]
+        File2[Comparison PDF]
+        File3[Evaluation Report]
+    end
+```
 
 ## Prerequisites
 
