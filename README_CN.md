@@ -72,7 +72,7 @@ graph TD
 ## 安装
 
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 ## 使用方法
