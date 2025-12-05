@@ -72,6 +72,13 @@ graph TD
 ## 安装
 
 ```bash
+# 创建虚拟环境
+uv venv
+
+# 激活虚拟环境
+source .venv/bin/activate
+
+# 安装依赖
 uv sync
 ```
 
