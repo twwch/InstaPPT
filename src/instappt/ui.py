@@ -5,7 +5,7 @@ import shutil
 from instappt.core import PPTTranslator
 from instappt.models import SDKConfig, ModelConfig
 
-def translate_ppt(file, lang, config_json, progress=gr.Progress()):
+def translate_ppt(file, lang, config_json, use_cache, progress=gr.Progress()):
     if not file:
         raise gr.Error("Please upload a PPTX file.")
     
@@ -45,10 +45,10 @@ def translate_ppt(file, lang, config_json, progress=gr.Progress()):
         translator_config=translator_cfg,
         optimizer_config=optimizer_cfg,
         evaluator_config=evaluator_cfg,
-        enable_cache=True # Default to True
+        enable_cache=use_cache
     )
     
-    translator = PPTTranslator(sdk_config, concurrency=16) # Lower concurrency for web app safety
+    translator = PPTTranslator(sdk_config, concurrency=32) # Lower concurrency for web app safety
     
     # 2. Setup Paths
     # Gradio stores uploaded file in a temp path
@@ -67,7 +67,10 @@ def translate_ppt(file, lang, config_json, progress=gr.Progress()):
     # 3. Process with Progress
     # progress(0, desc="Starting...")
     
+    last_update_val = -1.0
+    
     def progress_callback(current, total, stage_name):
+        nonlocal last_update_val
         # Map stages to progress range [0, 1]
         # Translation: 0-0.4
         # Evaluation: 0.4-0.7
@@ -84,7 +87,15 @@ def translate_ppt(file, lang, config_json, progress=gr.Progress()):
             
         fraction = current / total if total > 0 else 0
         overall = base + (fraction * scale)
-        progress(overall, desc=f"{stage_name} ({current}/{total})")
+        
+        # Throttle: only update if changed by > 0.01 (1%)
+        if abs(overall - last_update_val) > 0.01 or current == total:
+            # print(f"DEBUG: Updating UI Progress: {overall:.2f}")
+            try:
+                progress(overall, desc=f"{stage_name} ({current}/{total})")
+                last_update_val = overall
+            except Exception as e:
+                print(f"DEBUG: Gradio progress update failed: {e}")
 
     try:
         translator.process_ppt(input_path, output_pptx_path, lang, progress_callback=progress_callback)
@@ -141,6 +152,7 @@ def create_ui():
                 file_input = gr.File(label="Upload PPTX", file_types=[".pptx"])
                 languages = ["English", "Chinese", "Spanish", "French", "German", "Japanese", "Korean", "Russian", "Arabic", "Portuguese", "Italian"]
                 lang_input = gr.Dropdown(label="Target Language", choices=languages, value="English", allow_custom_value=True)
+                cache_input = gr.Checkbox(label="Enable Cache", value=True)
                 config_input = gr.Code(label="Model Configuration (JSON)", value=json.dumps(default_config, indent=4), language="json")
                 submit_btn = gr.Button("Start Translation", variant="primary")
             
@@ -149,7 +161,7 @@ def create_ui():
         
         submit_btn.click(
             fn=translate_ppt,
-            inputs=[file_input, lang_input, config_input],
+            inputs=[file_input, lang_input, config_input, cache_input],
             outputs=[output_files]
         )
     return app
