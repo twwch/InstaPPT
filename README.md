@@ -2,6 +2,16 @@
 
 **InstaPPT** is an AI-powered PowerPoint translation tool designed to preserve the original visual fidelity of your slides while providing high-quality translations.
 
+![InstaPPT UI](images/ui_screenshot.png)
+
+## Demo
+
+Here is a visual comparison of the original and translated slides:
+
+![Visual Comparison](images/demo_comparison.png)
+
+[View full comparison PDF](examples/AI发展趋势2025_comparison.pdf)
+
 ## Features
 
 - **AI Translation:** Uses advanced LLMs (like GPT-4, DeepSeek) for accurate, context-aware translation.

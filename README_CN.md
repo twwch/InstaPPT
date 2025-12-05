@@ -2,6 +2,16 @@
 
 **InstaPPT** 是一款由 AI 驱动的 PowerPoint 翻译工具，旨在提供高质量翻译的同时，完美保留幻灯片的原始视觉效果。
 
+![InstaPPT UI](images/ui_screenshot.png)
+
+## 演示
+
+以下是原始幻灯片与翻译后幻灯片的视觉对比：
+
+![Visual Comparison](images/demo_comparison.png)
+
+[查看完整对比 PDF](examples/AI发展趋势2025_comparison.pdf)
+
 ## 主要功能
 
 - **AI 智能翻译：** 利用先进的大语言模型（如 GPT-4, DeepSeek）进行准确、上下文感知的翻译。
