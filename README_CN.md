@@ -8,9 +8,9 @@
 
 以下是原始幻灯片与翻译后幻灯片的视觉对比：
 
-![Visual Comparison](images/demo_comparison.png)
+![Visual Comparison](images/demo_comparison.jpeg)
 
-[查看完整对比 PDF](examples/AI发展趋势2025_comparison.pdf)
+[查看完整对比 PDF](examples/守护地球之肺：森林保护行动_comparison.pdf)
 
 ## 主要功能
 
@@ -19,6 +19,45 @@
 - **视觉对照报告：** 生成左右对照的 PDF 报告，以图片形式展示翻译前后的幻灯片，确保“所见即所得”，避免字体渲染问题。
 - **智能缓存：** 自动缓存翻译结果，重复运行时节省成本和时间。
 - **跨平台支持：** 支持 macOS（已优化）和 Windows。
+
+## 系统架构
+
+```mermaid
+graph TD
+    User([用户]) -->|输入| Interface
+    
+    subgraph Interface ["用户界面"]
+        CLI[命令行工具]
+        UI[Web 界面 (Gradio)]
+    end
+    
+    Interface --> Controller[核心控制器]
+    
+    subgraph Pipeline ["处理流水线"]
+        Parser[PPTX 解析器] -->|提取文本| Segments[文本片段]
+        
+        subgraph Translation ["LLM 翻译循环"]
+            Step1[翻译] --> Step2[评估]
+            Step2 -- "分数低" --> Step3[优化]
+            Step2 -- "分数高" --> Ready[就绪]
+            Step3 --> Ready
+        end
+        
+        Segments -->|并发处理| Translation
+        Translation <-->|API 调用| LLM[(LLM 提供商)]
+        
+        Ready --> Assembler[PPTX 组装器]
+        Assembler -->|生成| Artifacts
+    end
+    
+    Controller --> Pipeline
+    
+    subgraph Artifacts ["输出文件"]
+        File1[翻译后的 PPTX]
+        File2[视觉对比 PDF]
+        File3[评估报告]
+    end
+```
 
 ## 环境要求
 
