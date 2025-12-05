@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instappt"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "openai>=2.9.0",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "pydantic>=2.12.5",
+    "python-pptx>=1.0.2",
+    "reportlab>=4.4.5",
+    "tqdm>=4.67.1",
+    "gradio>=4.0.0",
+    "pypdf>=3.16.2",
+]
+
+[project.scripts]
+instappt = "instappt.cli:main"
