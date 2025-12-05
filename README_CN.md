@@ -27,14 +27,14 @@ graph TD
     User([用户]) -->|输入| Interface
     
     subgraph Interface ["用户界面"]
-        CLI[命令行工具]
-        UI[Web 界面 (Gradio)]
+        CLI["命令行工具"]
+        UI["Web 界面 (Gradio)"]
     end
     
-    Interface --> Controller[核心控制器]
+    Interface --> Controller["核心控制器"]
     
     subgraph Pipeline ["处理流水线"]
-        Parser[PPTX 解析器] -->|提取文本| Segments[文本片段]
+        Parser["PPTX 解析器"] -->|提取文本| Segments["文本片段"]
         
         subgraph Translation ["LLM 翻译循环"]
             Step1[翻译] --> Step2[评估]
@@ -44,18 +44,18 @@ graph TD
         end
         
         Segments -->|并发处理| Translation
-        Translation <-->|API 调用| LLM[(LLM 提供商)]
+        Translation <-->|API 调用| LLM[("LLM 提供商")]
         
-        Ready --> Assembler[PPTX 组装器]
+        Ready --> Assembler["PPTX 组装器"]
         Assembler -->|生成| Artifacts
     end
     
     Controller --> Pipeline
     
     subgraph Artifacts ["输出文件"]
-        File1[翻译后的 PPTX]
-        File2[视觉对比 PDF]
-        File3[评估报告]
+        File1["翻译后的 PPTX"]
+        File2["视觉对比 PDF"]
+        File3["评估报告"]
     end
 ```
 
