@@ -34,9 +34,12 @@ class PPTTranslator:
                 print(f"Warning: Failed to load cache: {e}")
         return {}
 
-    def _save_cache(self):
-        """Save cache to disk. Thread-safe."""
+    def _save_cache(self, key: str, value: Any):
+        if not self.config.enable_cache:
+            return
+            
         with self.cache_lock:
+            self.cache[key] = value
             try:
                 with open(self.cache_file, 'w', encoding='utf-8') as f:
                     json.dump(self.cache, f, ensure_ascii=False, indent=2)
@@ -95,16 +98,16 @@ class PPTTranslator:
     def _stage_translation(self, items: Dict[str, str], target_lang: str, progress_callback=None) -> Dict[str, TranslationSegment]:
         results = {}
         with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
-            future_to_sid = {
-                executor.submit(self._task_translate, txt, target_lang): sid 
-                for sid, txt in items.items()
-            }
+            future_to_sid = {}
+            for sid, text in items.items():
+                future = executor.submit(self._task_translate, text, target_lang)
+                future_to_sid[future] = sid
+
             # Green bar
             processed = 0
             total = len(items)
             with tqdm(total=total, desc="Translation", unit="seg", colour='green') as pbar:
                 for future in as_completed(future_to_sid):
-                    # print("DEBUG: Future completed")
                     sid = future_to_sid[future]
                     try:
                         seg = future.result()
@@ -123,7 +126,11 @@ class PPTTranslator:
 
     def _task_translate(self, text: str, target_lang: str) -> TranslationSegment:
         start_a = time.time()
-        trans_prompt = TRANSLATION_PROMPT.format(text=text, target_language=target_lang)
+        trans_prompt = TRANSLATION_PROMPT.format(
+            source_language="Auto",
+            target_language=target_lang,
+            text=text
+        )
         trans_a = self._call_llm(self.config.translator_config, trans_prompt, tag="Stage A: Translation")
         dur_a = time.time() - start_a
         
@@ -472,7 +479,6 @@ class PPTTranslator:
                 messages=messages,
                 temperature=0.3
             )
-            # print("DEBUG: Request complete.")
             duration = time.time() - start_time
             content = response.choices[0].message.content
             
@@ -496,10 +502,8 @@ class PPTTranslator:
                 self.detailed_logs.append(log_entry)
             
             # 3. Update Cache
-            if self.config.enable_cache:
-                with self.cache_lock:
-                    self.cache[cache_key] = content
-                    self._save_cache()
+            # 3. Update Cache
+            self._save_cache(cache_key, content)
             
             return content
             
