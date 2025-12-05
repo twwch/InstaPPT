@@ -27,14 +27,14 @@ graph TD
     User([User]) -->|Input| Interface
     
     subgraph Interface ["User Interface"]
-        CLI[Command Line]
-        UI[Web UI (Gradio)]
+        CLI["Command Line"]
+        UI["Web UI (Gradio)"]
     end
     
-    Interface --> Controller[Core Controller]
+    Interface --> Controller["Core Controller"]
     
     subgraph Pipeline ["Processing Pipeline"]
-        Parser[PPTX Parser] -->|Extract Text| Segments[Text Segments]
+        Parser["PPTX Parser"] -->|Extract Text| Segments["Text Segments"]
         
         subgraph Translation ["LLM Translation Loop"]
             Step1[Translation] --> Step2[Evaluation]
@@ -44,18 +44,18 @@ graph TD
         end
         
         Segments -->|Parallel Processing| Translation
-        Translation <-->|API Calls| LLM[(LLM Provider)]
+        Translation <-->|API Calls| LLM[("LLM Provider")]
         
-        Ready --> Assembler[PPTX Assembler]
+        Ready --> Assembler["PPTX Assembler"]
         Assembler -->|Generate| Artifacts
     end
     
     Controller --> Pipeline
     
     subgraph Artifacts ["Output Files"]
-        File1[Translated PPTX]
-        File2[Comparison PDF]
-        File3[Evaluation Report]
+        File1["Translated PPTX"]
+        File2["Comparison PDF"]
+        File3["Evaluation Report"]
     end
 ```
 
