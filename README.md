@@ -71,6 +71,14 @@ graph TD
 
 ## Installation
 
+### Install via Pip
+
+```bash
+uv pip install instappt
+```
+
+### Development Setup
+
 ```bash
 # Create virtual environment
 uv venv
