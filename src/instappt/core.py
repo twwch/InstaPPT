@@ -46,7 +46,7 @@ class PPTTranslator:
             except Exception as e:
                 print(f"Warning: Failed to save cache: {e}")
 
-    def process_ppt(self, input_path: str, output_path: str, target_language: str, progress_callback=None):
+    def process_ppt(self, input_path: str, output_path: str, target_language: str, glossary_content: str = "", progress_callback=None):
         """
         Main pipeline: Load -> Translate -> Evaluate -> Optimize -> Save
         """
@@ -69,14 +69,14 @@ class PPTTranslator:
         print(f"Processing {len(items_to_process)} segments with concurrency {self.concurrency}...")
 
         # --- Stage A: Translation (Green) ---
-        segment_map = self._stage_translation(items_to_process, target_language, progress_callback)
+        segment_map = self._stage_translation(items_to_process, target_language, glossary_content, progress_callback)
 
         # --- Stage B: Evaluation (Blue) ---
         # We process the segments generated in Stage A
-        self._stage_evaluation(segment_map, target_language, progress_callback)
+        self._stage_evaluation(segment_map, target_language, glossary_content, progress_callback)
 
         # --- Stage C: Optimization (Yellow) ---
-        self._stage_optimization(segment_map, target_language, progress_callback)
+        self._stage_optimization(segment_map, target_language, glossary_content, progress_callback)
 
         # Finalize list
         # Ensure order matches items_to_process if possible, or just list
@@ -95,12 +95,12 @@ class PPTTranslator:
             
         presentation.save(output_path)
 
-    def _stage_translation(self, items: Dict[str, str], target_lang: str, progress_callback=None) -> Dict[str, TranslationSegment]:
+    def _stage_translation(self, items: Dict[str, str], target_lang: str, glossary: str, progress_callback=None) -> Dict[str, TranslationSegment]:
         results = {}
         with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
             future_to_sid = {}
             for sid, text in items.items():
-                future = executor.submit(self._task_translate, text, target_lang)
+                future = executor.submit(self._task_translate, text, target_lang, glossary)
                 future_to_sid[future] = sid
 
             # Green bar
@@ -124,12 +124,16 @@ class PPTTranslator:
                             print(f"Callback error: {e}")
         return results
 
-    def _task_translate(self, text: str, target_lang: str) -> TranslationSegment:
+    def _task_translate(self, text: str, target_lang: str, glossary: str) -> TranslationSegment:
         start_a = time.time()
+        
+        glossary_section = f"\nTerminology Guide:\n{glossary}\n" if glossary.strip() else ""
+        
         trans_prompt = TRANSLATION_PROMPT.format(
             source_language="Auto",
             target_language=target_lang,
-            text=text
+            text=text,
+            glossary=glossary_section
         )
         trans_a = self._call_llm(self.config.translator_config, trans_prompt, tag="Stage A: Translation")
         dur_a = time.time() - start_a
@@ -146,10 +150,10 @@ class PPTTranslator:
             final_text=None # Decided later
         )
 
-    def _stage_evaluation(self, segment_map: Dict[str, TranslationSegment], target_lang: str, progress_callback=None):
+    def _stage_evaluation(self, segment_map: Dict[str, TranslationSegment], target_lang: str, glossary: str, progress_callback=None):
         with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
             future_to_sid = {
-                executor.submit(self._task_evaluate, seg, target_lang): sid 
+                executor.submit(self._task_evaluate, seg, target_lang, glossary): sid 
                 for sid, seg in segment_map.items()
             }
             # Blue bar
@@ -170,12 +174,16 @@ class PPTTranslator:
                     if progress_callback:
                         progress_callback(processed, total, "Evaluation")
 
-    def _task_evaluate(self, seg: TranslationSegment, target_lang: str) -> TranslationSegment:
+    def _task_evaluate(self, seg: TranslationSegment, target_lang: str, glossary: str) -> TranslationSegment:
         start_eval_a = time.time()
+        
+        glossary_section = f"\nTerminology Guide:\n{glossary}\n" if glossary.strip() else ""
+        
         eval_prompt_a = EVALUATION_PROMPT.format(
             source_text=seg.original_text, 
             target_language=target_lang, 
-            translation=seg.translated_text_a
+            translation=seg.translated_text_a,
+            glossary=glossary_section
         )
         eval_resp_a = self._call_llm(self.config.evaluator_config, eval_prompt_a, tag="Stage B1: Eval of A")
         eval_result_a = self._parse_evaluation(eval_resp_a)
@@ -185,10 +193,10 @@ class PPTTranslator:
         seg.evaluation_a = eval_result_a
         return seg
 
-    def _stage_optimization(self, segment_map: Dict[str, TranslationSegment], target_lang: str, progress_callback=None):
+    def _stage_optimization(self, segment_map: Dict[str, TranslationSegment], target_lang: str, glossary: str, progress_callback=None):
         with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
             future_to_sid = {
-                executor.submit(self._task_optimize, seg, target_lang): sid 
+                executor.submit(self._task_optimize, seg, target_lang, glossary): sid 
                 for sid, seg in segment_map.items()
             }
             # Yellow bar
@@ -207,7 +215,7 @@ class PPTTranslator:
                     if progress_callback:
                         progress_callback(processed, total, "Optimization")
 
-    def _task_optimize(self, seg: TranslationSegment, target_lang: str) -> TranslationSegment:
+    def _task_optimize(self, seg: TranslationSegment, target_lang: str, glossary: str) -> TranslationSegment:
         # Decision logic
         if not seg.evaluation_a or seg.evaluation_a.overall_score > 9.5:
             # Skip
@@ -215,13 +223,16 @@ class PPTTranslator:
             seg.optimized_text_c = ""
             return seg # Return early
             
+        glossary_section = f"\nTerminology Guide:\n{glossary}\n" if glossary.strip() else ""
+
         # Optimize
         start_c = time.time()
         opt_prompt = OPTIMIZATION_PROMPT.format(
             target_language=target_lang,
             source_text=seg.original_text,
             translation=seg.translated_text_a,
-            suggestions=seg.evaluation_a.suggestions
+            suggestions=seg.evaluation_a.suggestions,
+            glossary=glossary_section
         )
         trans_c = self._call_llm(self.config.optimizer_config, opt_prompt, tag="Stage C: Optimization")
         dur_c = time.time() - start_c
@@ -231,7 +242,8 @@ class PPTTranslator:
         eval_prompt_c = EVALUATION_PROMPT.format(
             source_text=seg.original_text, 
             target_language=target_lang, 
-            translation=trans_c
+            translation=trans_c,
+            glossary=glossary_section
         )
         eval_resp_c = self._call_llm(self.config.evaluator_config, eval_prompt_c, tag="Stage B2: Eval of C")
         eval_result_c = self._parse_evaluation(eval_resp_c)

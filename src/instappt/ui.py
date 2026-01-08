@@ -2,10 +2,52 @@ import gradio as gr
 import os
 import json
 import shutil
+import pandas as pd
 from instappt.core import PPTTranslator
 from instappt.models import SDKConfig, ModelConfig
 
-def translate_ppt(file, lang, config_json, use_cache, progress=gr.Progress()):
+def parse_markdown_glossary(text):
+    if not text or not text.strip():
+        return None, "Empty glossary"
+    
+    try:
+        lines = [line.strip() for line in text.strip().split('\n') if line.strip()]
+        if not lines:
+            return None, "Empty glossary"
+
+        # Find header
+        header_line = lines[0]
+        if "|" not in header_line:
+             return None, "No valid markdown table header found."
+             
+        headers = [h.strip() for h in header_line.split('|') if h.strip()]
+        
+        data = []
+        start_idx = 1
+        
+        # Check/Skip separator
+        if len(lines) > 1 and "---" in lines[1]:
+            start_idx = 2
+            
+        for line in lines[start_idx:]:
+            if "|" not in line: continue
+            # Handle escaped pipes? Assuming simple for now
+            row = [c.strip() for c in line.split('|') if c.strip()]
+            
+            # Pad or truncate to match headers length
+            if len(row) < len(headers):
+                row += [""] * (len(headers) - len(row))
+            elif len(row) > len(headers):
+                row = row[:len(headers)]
+                
+            data.append(row)
+            
+        df = pd.DataFrame(data, columns=headers)
+        return df, f"Successfully parsed {len(data)} terms."
+    except Exception as e:
+        return None, f"Error parsing glossary: {str(e)}"
+
+def translate_ppt(file, lang, config_json, use_cache, glossary_text, progress=gr.Progress()):
     if not file:
         raise gr.Error("Please upload a PPTX file.")
     
@@ -98,7 +140,7 @@ def translate_ppt(file, lang, config_json, use_cache, progress=gr.Progress()):
                 print(f"DEBUG: Gradio progress update failed: {e}")
 
     try:
-        translator.process_ppt(input_path, output_pptx_path, lang, progress_callback=progress_callback)
+        translator.process_ppt(input_path, output_pptx_path, lang, glossary_content=glossary_text, progress_callback=progress_callback)
     except Exception as e:
         raise gr.Error(f"Translation failed: {str(e)}")
         
@@ -153,6 +195,24 @@ def create_ui():
                 languages = ["English", "Chinese", "Spanish", "French", "German", "Japanese", "Korean", "Russian", "Arabic", "Portuguese", "Italian"]
                 lang_input = gr.Dropdown(label="Target Language", choices=languages, value="English", allow_custom_value=True)
                 cache_input = gr.Checkbox(label="Enable Cache", value=True)
+                
+                gr.Markdown("### Terminology Glossary")
+                with gr.Row():
+                    glossary_input = gr.TextArea(label="Markdown Table", placeholder="| Term | Translation |\n| --- | --- |\n| AI | 人工智能 |", lines=5)
+                with gr.Row():
+                    validate_btn = gr.Button("Validate Glossary", size="sm")
+                    glossary_status = gr.Markdown("")
+                
+                glossary_preview = gr.Dataframe(label="Glossary Preview", interactive=False, wrap=True)
+                
+                def on_validate(text):
+                    df, msg = parse_markdown_glossary(text)
+                    if df is not None:
+                        return df, f"✅ {msg}"
+                    return None, f"❌ {msg}"
+
+                validate_btn.click(on_validate, inputs=[glossary_input], outputs=[glossary_preview, glossary_status])
+
                 config_input = gr.Code(label="Model Configuration (JSON)", value=json.dumps(default_config, indent=4), language="json")
                 submit_btn = gr.Button("Start Translation", variant="primary")
             
@@ -161,7 +221,7 @@ def create_ui():
         
         submit_btn.click(
             fn=translate_ppt,
-            inputs=[file_input, lang_input, config_input, cache_input],
+            inputs=[file_input, lang_input, config_input, cache_input, glossary_input],
             outputs=[output_files]
         )
     return app

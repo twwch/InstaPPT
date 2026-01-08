@@ -1,3 +1,14 @@
+---
+title: InstaPPT
+emoji: 📚
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 5.9.1
+app_file: start_ui.py
+pinned: false
+---
+
 # InstaPPT
 
 **InstaPPT** is an AI-powered PowerPoint translation tool designed to preserve the original visual fidelity of your slides while providing high-quality translations.

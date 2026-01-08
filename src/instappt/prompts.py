@@ -6,6 +6,8 @@ Translate the following text to {target_language} while maintaining perfection i
 4. **Terminology:** Correct domain-specific vocabulary.
 5. **Completeness:** No missing content.
 
+{glossary}
+
 IMPORTANT:
 - If the source text is already in {target_language}, output it EXACTLY as is, preserving all case and formatting. Do not translate or modify it.
 - Return ONLY the translated text.
@@ -18,6 +20,8 @@ You are a professional linguistic evaluator.
 Source Text: {source_text}
 Target Language: {target_language}
 Translation: {translation}
+
+{glossary}
 
 Evaluate the translation on:
 1. Accuracy (1-10)
@@ -52,6 +56,8 @@ Your goal is to optimize the translation to achieve perfection in the following 
 5. **Completeness:** No missing content.
 
 Target Language: {target_language}
+
+{glossary}
 
 Source Text:
 {source_text}
