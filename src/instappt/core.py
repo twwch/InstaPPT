@@ -497,7 +497,7 @@ class PPTTranslator:
             # Log usage
             real_model = response.model if hasattr(response, 'model') else config.model
             usage = response.usage
-            usage_dict = usage.dict() if hasattr(usage, 'dict') else usage.__dict__
+            usage_dict = usage.model_dump() if hasattr(usage, 'model_dump') else usage.__dict__
             
             log_entry = {
                 "timestamp": time.time(),
