@@ -192,7 +192,10 @@ def create_ui():
         with gr.Row():
             with gr.Column():
                 file_input = gr.File(label="Upload PPTX", file_types=[".pptx"])
-                languages = ["English", "Chinese", "Spanish", "French", "German", "Japanese", "Korean", "Russian", "Arabic", "Portuguese", "Italian"]
+                languages = [
+                    "English", "Chinese", "Spanish", "French", "German", 
+                    "Japanese", "Korean", "Russian", "Arabic", "Portuguese", "Italian"
+                ]
                 lang_input = gr.Dropdown(label="Target Language", choices=languages, value="English", allow_custom_value=True)
                 cache_input = gr.Checkbox(label="Enable Cache", value=True)
                 
