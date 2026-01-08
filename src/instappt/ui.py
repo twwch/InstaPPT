@@ -203,14 +203,13 @@ def create_ui():
                     validate_btn = gr.Button("Validate Glossary", size="sm")
                     glossary_status = gr.Markdown("")
                 
-                glossary_preview = gr.HTML(label="Glossary Preview")
+                glossary_preview = gr.Dataframe(label="Glossary Preview", interactive=False, wrap=True)
                 
                 def on_validate(text):
                     df, msg = parse_markdown_glossary(text)
                     if df is not None:
-                        # Return HTML table
-                        return df.to_html(index=False, classes="table table-striped"), f"✅ {msg}"
-                    return "<div>No valid glossary</div>", f"❌ {msg}"
+                        return df, f"✅ {msg}"
+                    return None, f"❌ {msg}"
 
                 validate_btn.click(on_validate, inputs=[glossary_input], outputs=[glossary_preview, glossary_status])
 
