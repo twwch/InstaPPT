@@ -9,6 +9,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
+from pypdf import PdfReader, PdfWriter, PageObject, Transformation
 
 def generate_json_report(segments: List[TranslationSegment], output_path: str):
     """Save segments as JSON."""
@@ -322,7 +323,6 @@ def generate_visual_comparison_pdf(original_pptx: str, translated_pptx: str, out
     """
     import subprocess
     import shutil
-    from pypdf import PdfReader, PdfWriter, PageObject, Transformation
     
     # 1. Check for LibreOffice (soffice) - Only on non-Windows
     soffice = None
@@ -516,6 +516,44 @@ def save_token_usage(detailed_logs: List[dict], models: dict, output_path: str):
     
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+def merge_pdfs_side_by_side(pdf_a: str, pdf_b: str, output_path: str):
+    """
+    Merge two PDFs side-by-side using pypdf.
+    """
+    reader_a = PdfReader(pdf_a)
+    reader_b = PdfReader(pdf_b)
+    writer = PdfWriter()
+    
+    num_pages = min(len(reader_a.pages), len(reader_b.pages))
+    
+    for i in range(num_pages):
+        page_a = reader_a.pages[i]
+        page_b = reader_b.pages[i]
+        
+        width_a = page_a.mediabox.width
+        height_a = page_a.mediabox.height
+        width_b = page_b.mediabox.width
+        height_b = page_b.mediabox.height
+        
+        # New page with combined width
+        total_width = width_a + width_b
+        max_height = max(height_a, height_b)
+        
+        new_page = PageObject.create_blank_page(width=total_width, height=max_height)
+        
+        # Add first page
+        new_page.merge_page(page_a)
+        
+        # Add second page with transformation
+        # Transformation.translate takes tx, ty
+        page_b.add_transformation(Transformation().translate(tx=float(width_a), ty=0))
+        new_page.merge_page(page_b)
+        
+        writer.add_page(new_page)
+        
+    with open(output_path, "wb") as f:
+        writer.write(f)
 
 def generate_bilingual_pdf(segments: List[TranslationSegment], output_path: str):
     """
